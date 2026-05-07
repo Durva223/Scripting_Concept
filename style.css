@@ -1,0 +1,123 @@
+function submitReport() {
+
+    var name = document.getElementById("name").value;
+    var location = document.getElementById("location").value;
+    var animal = document.getElementById("animal").value;
+    var description = document.getElementById("description").value;
+    var file = document.getElementById("image").files[0];
+
+    if (name === "" || location === "" || animal === "" || description === "") {
+        alert("Fill all fields");
+        return;
+    }
+
+    var reader = new FileReader();
+
+    reader.onload = function () {
+
+        var reportData = {
+            name: name,
+            location: location,
+            animal: animal,
+            description: description,
+            status: "Pending",
+            date: new Date().toLocaleString(),
+            image: reader.result
+        };
+
+        var reports = JSON.parse(localStorage.getItem("reports")) || [];
+        reports.push(reportData);
+
+        localStorage.setItem("reports", JSON.stringify(reports));
+
+        displayReports();
+    };
+
+    if (file) {
+        reader.readAsDataURL(file);
+    }
+}
+
+function displayReports(filtered = null) {
+
+    var reports = filtered || JSON.parse(localStorage.getItem("reports")) || [];
+    var output = document.getElementById("reports");
+
+    if (!output) return;
+
+    output.innerHTML = "";
+
+    reports.forEach(function (r, i) {
+
+        var div = document.createElement("div");
+        div.className = "report";
+
+        div.innerHTML =
+            "<b>Name:</b> " + r.name + "<br>" +
+            "<b>Location:</b> " + r.location + "<br>" +
+            "<a href='https://www.google.com/maps/search/" + r.location + "' target='_blank'>📍 Map</a><br>" +
+            "<b>Animal:</b> " + r.animal + "<br>" +
+            "<b>Problem:</b> " + r.description + "<br>" +
+            "<b>Date:</b> " + r.date + "<br>" +
+            "<b>Status:</b> <span class='" + (r.status === "Pending" ? "pending" : "resolved") + "'>" + r.status + "</span><br>" +
+            "<img src='" + r.image + "' width='100'><br>" +
+            "<button onclick='toggleStatus(" + i + ")'>Status</button>" +
+            "<button onclick='deleteReport(" + i + ")'>Delete</button>";
+
+        output.appendChild(div);
+    });
+}
+
+function deleteReport(i) {
+    var reports = JSON.parse(localStorage.getItem("reports")) || [];
+    reports.splice(i, 1);
+    localStorage.setItem("reports", JSON.stringify(reports));
+    displayReports();
+}
+
+function toggleStatus(i) {
+    var reports = JSON.parse(localStorage.getItem("reports")) || [];
+
+    reports[i].status = reports[i].status === "Pending" ? "Resolved" : "Pending";
+
+    localStorage.setItem("reports", JSON.stringify(reports));
+    displayReports();
+}
+
+function searchReports() {
+    var text = document.getElementById("search").value.toLowerCase();
+    var reports = JSON.parse(localStorage.getItem("reports")) || [];
+
+    var filtered = reports.filter(r =>
+        r.location.toLowerCase().includes(text) ||
+        r.animal.toLowerCase().includes(text)
+    );
+
+    displayReports(filtered);
+}
+
+function toggleDarkMode() {
+    document.body.classList.toggle("dark");
+}
+
+function downloadPDF() {
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    var reports = JSON.parse(localStorage.getItem("reports")) || [];
+
+    var y = 10;
+
+    reports.forEach(function (r, i) {
+        doc.text("Report " + (i + 1), 10, y); y += 10;
+        doc.text("Name: " + r.name, 10, y); y += 10;
+        doc.text("Animal: " + r.animal, 10, y); y += 10;
+        doc.text("Location: " + r.location, 10, y); y += 10;
+        doc.text("Status: " + r.status, 10, y); y += 15;
+    });
+
+    doc.save("reports.pdf");
+}
+
+window.onload = displayReports;
